@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.8.1
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./artifacts:/home/vagrant/mlflow/artifacts
+    environment:
+      - MLFLOW_TRACKING_URI=http://localhost:5000
+      - MLFLOW_ALLOW_HTTP_REQUESTS=true
+    command: mlflow server --host 0.0.0.0 --port 5000 --default-artifact-root /home/vagrant/mlflow/artifacts --serve-artifacts
+    networks:
+      - automl_network
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - automl_network
+    restart: always
+
+networks:
+  automl_network:
+    driver: bridge

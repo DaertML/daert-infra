@@ -1,0 +1,149 @@
+---
+- name: Configure AutoML VM
+  hosts: all
+  become: true
+  vars:
+    automl_user: vagrant
+    automl_dir: /home/vagrant
+    mlflow_port: 5000
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install system packages
+      apt:
+        name:
+          - docker.io
+          - docker-compose
+          - python3-pip
+          - python3-venv
+          - git
+          - curl
+          - wget
+          - vim
+          - htop
+          - tree
+        state: present
+
+    - name: Ensure Docker service is enabled
+      systemd:
+        name: docker
+        enabled: yes
+
+    - name: Ensure Docker service is started
+      systemd:
+        name: docker
+        state: started
+
+    - name: Add user to docker group
+      user:
+        name: "{{ automl_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: "{{ automl_user }}"
+        group: "{{ automl_user }}"
+        mode: '0755'
+      loop:
+        - "{{ automl_dir }}/experiments"
+        - "{{ automl_dir }}/mlflow/artifacts"
+        - "{{ automl_dir }}/models"
+        - "{{ automl_dir }}/results"
+
+    - name: Install Python packages
+      pip:
+        name:
+          - mlflow
+          - scikit-learn
+          - pandas
+          - numpy
+          - xgboost
+          - lightgbm
+          - docker
+          - docker-compose
+        state: present
+
+    - name: Create MLflow docker-compose file
+      copy:
+        content: |
+          version: '3.8'
+
+          services:
+            mlflow:
+              image: ghcr.io/mlflow/mlflow:v3.8.1
+              ports:
+                - "{{ mlflow_port }}:5000"
+              volumes:
+                - ./artifacts:/home/vagrant/mlflow/artifacts
+              environment:
+                - MLFLOW_TRACKING_URI=http://localhost:{{ mlflow_port }}
+                - MLFLOW_ALLOW_HTTP_REQUESTS=true
+              command: mlflow server --host 0.0.0.0 --port {{ mlflow_port }} --default-artifact-root /home/vagrant/mlflow/artifacts --serve-artifacts
+              networks:
+                - automl_network
+              restart: always
+
+            redis:
+              image: redis:7-alpine
+              ports:
+                - "6379:6379"
+              networks:
+                - automl_network
+              restart: always
+
+          networks:
+            automl_network:
+              driver: bridge
+        dest: "{{ automl_dir }}/docker-compose.yml"
+
+    - name: Create systemd service for MLflow
+      copy:
+        content: |
+          [Unit]
+          Description=MLflow Tracking Server
+          After=docker.service
+          Requires=docker.service
+
+          [Service]
+          Type=oneshot
+          WorkingDirectory={{ automl_dir }}
+          ExecStart=/usr/local/bin/docker-compose up -d
+          ExecStop=/usr/local/bin/docker-compose down
+          RemainAfterExit=yes
+          User={{ automl_user }}
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/mlflow.service
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable MLflow service
+      systemd:
+        name: mlflow
+        enabled: yes
+
+    - name: Start MLflow service
+      systemd:
+        name: mlflow
+        state: started
+
+    - name: Wait for MLflow to be ready
+      wait_for:
+        host: localhost
+        port: "{{ mlflow_port }}"
+        timeout: 60
+        delay: 5
+
+    - name: Display MLflow status
+      debug:
+        msg: "MLflow tracking server is running at http://localhost:{{ mlflow_port }}"

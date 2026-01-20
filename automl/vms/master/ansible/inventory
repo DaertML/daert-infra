@@ -1,0 +1,11 @@
+[all]
+automl-master ansible_host=192.168.56.10 ansible_user=vagrant ansible_ssh_private_key_file=~/.vagrant.d/insecure_private_key
+
+[automl]
+automl-master
+
+[mlflow_servers]
+automl-master
+
+[experiment_servers]
+automl-master
