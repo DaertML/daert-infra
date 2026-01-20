@@ -11,3 +11,4 @@ The original designs will be saved under the "mlops" folder, and will contain in
 - Notebooks: experiment with ideas in an environment that allows for an easy deployment of notebooks.
 - Compute Instance: raw container where you can modify from a set of given blueprints, the needed dependencies, code...
 
+As MLFlow is quite rich nowadays and has support for LLM outputs, Im planning to get some ideas going to do things with LLMs.
