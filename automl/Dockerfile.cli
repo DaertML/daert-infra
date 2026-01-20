@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+LABEL maintainer="automl@localhost"
+LABEL description="AutoML Experiment Manager CLI"
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /home/pc/Desktop/open-ml-labs/automl
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    curl \
+    wget \
+    vim \
+    nano \
+    htop \
+    tree \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -s /bin/bash automl
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+RUN chown -R automl:automl /home/pc/Desktop/open-ml-labs/automl
+
+USER automl
+
+WORKDIR /home/pc/Desktop/open-ml-labs/automl
+
+ENTRYPOINT ["/bin/bash", "--login", "-c"]
+
+CMD ["/home/pc/Desktop/open-ml-labs/automl/entrypoint.sh"]

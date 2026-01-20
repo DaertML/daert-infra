@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  automl:
+    build:
+      context: .
+      dockerfile: Dockerfile.cli
+    image: automl-cli:latest
+    container_name: automl-cli
+    volumes:
+      - ./experiments:/home/pc/Desktop/open-ml-labs/automl/experiments
+      - ./mlflow_artifacts:/home/pc/Desktop/open-ml-labs/automl/mlflow_artifacts
+      - ./models:/home/pc/Desktop/open-ml-labs/automl/models
+      - ./results:/home/pc/Desktop/open-ml-labs/automl/results
+      - ./config.yaml:/home/pc/Desktop/open-ml-labs/automl/config.yaml
+    working_dir: /home/pc/Desktop/open-ml-labs/automl
+    stdin_open: true
+    tty: true
+    entrypoint: ["/bin/bash", "--login", "-c"]
+    command: ["source /home/pc/Desktop/open-ml-labs/automl/entrypoint.sh"]
+    environment:
+      - AUTOTERRAFORM_CLI=1
+      - MLFLOW_TRACKING_URI=http://localhost:5000
+      - MLFLOW_ARTIFACT_ROOT=/home/pc/Desktop/open-ml-labs/automl/mlflow_artifacts
+    network_mode: host
+    profiles:
+      - cli
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.8.1
+    container_name: automl-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow_artifacts:/home/pc/Desktop/open-ml-labs/automl/mlflow_artifacts
+    environment:
+      - MLFLOW_TRACKING_URI=http://localhost:5000
+    command: mlflow server --host 0.0.0.0 --port 5000 --default-artifact-root /home/pc/Desktop/open-ml-labs/automl/mlflow_artifacts --serve-artifacts
+    restart: unless-stopped
+    network_mode: host
+
+networks:
+  automl-network:
+    driver: bridge

@@ -1,0 +1,45 @@
+automl:
+  name: "AutoML Experiment Manager"
+  version: "1.0.0"
+  log_level: "INFO"
+
+vm:
+  provider: "virtualbox"
+  base_box: "ubuntu/focal64"
+  memory: "4096"
+  cpus: 2
+  network:
+    ip: "192.168.56.10"
+    hostname: "automl-master"
+  synced_folder:
+    enabled: true
+    source: "./experiments"
+    destination: "/home/vagrant/experiments"
+
+docker:
+  registry: "localhost:5000"
+  mlflow:
+    image: "ghcr.io/mlflow/mlflow:v3.8.1"
+    port: 5000
+    volume: "/home/vagrant/mlflow/artifacts"
+  experiment:
+    base_image: "python:3.11-slim"
+    network: "automl_network"
+
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  artifact_root: "./mlflow_artifacts"
+  experiment:
+    default_name: "Default"
+
+experiments:
+  storage_dir: "./experiments"
+  results_dir: "./results"
+  models_dir: "./models"
+
+cli:
+  prompt: "automl> "
+  colors:
+    enabled: true
+    primary: "#00ff00"
+    secondary: "#00cc00"
